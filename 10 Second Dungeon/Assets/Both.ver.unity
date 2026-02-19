@@ -144,11 +144,11 @@ Transform:
   m_GameObject: {fileID: 87940043}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.086, y: -0.221, z: 0}
-  m_LocalScale: {x: 0.21186441, y: 0.21186441, z: 0.21186441}
+  m_LocalPosition: {x: -0.068, y: -0.859, z: 0}
+  m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1247897500}
+  m_Father: {fileID: 1610075564}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &620710048
 GameObject:
@@ -282,8 +282,7 @@ Transform:
   m_LocalPosition: {x: 0.268, y: 0.145, z: 0}
   m_LocalScale: {x: 4.72, y: 4.72, z: 4.72}
   m_ConstrainProportionsScale: 1
-  m_Children:
-  - {fileID: 87940044}
+  m_Children: []
   m_Father: {fileID: 1610075564}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1453514154
@@ -1165,8 +1164,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1610075564}
   - component: {fileID: 1610075563}
-  - component: {fileID: 1610075566}
   - component: {fileID: 1610075565}
+  - component: {fileID: 1610075566}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1186,17 +1185,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37149042bdaeffc45b6f2bb907debd6e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  rb: {fileID: 1610075565}
+  groundCheck: {fileID: 87940044}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
   moveSpeed: 8
-  groundAcceleration: 80
   airAcceleration: 40
   jumpPower: 18
   gravity: -35
   fallMultiplier: 1.7
-  groundCheck: {fileID: 87940044}
-  groundCheckRadius: 0.2
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 8
+  coyoteTime: 0.1
+  jumpBufferTime: 0.1
 --- !u!4 &1610075564
 Transform:
   m_ObjectHideFlags: 0
@@ -1211,6 +1211,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1247897500}
+  - {fileID: 87940044}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &1610075565
@@ -1240,8 +1241,8 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 4
---- !u!70 &1610075566
-CapsuleCollider2D:
+--- !u!61 &1610075566
+BoxCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1274,9 +1275,18 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.10689941, y: -0.16587836}
-  m_Size: {x: 0.7137988, y: 1.3317567}
-  m_Direction: 0
+  m_Offset: {x: -0.08597061, y: -0.06710026}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0, y: 0}
+    oldSize: {x: 0, y: 0}
+    newSize: {x: 0, y: 0}
+    adaptiveTilingThreshold: 0
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 0.5790402, y: 1.5636082}
+  m_EdgeRadius: 0
 --- !u!1 &2133727822
 GameObject:
   m_ObjectHideFlags: 0
@@ -1289,6 +1299,7 @@ GameObject:
   - component: {fileID: 2133727825}
   - component: {fileID: 2133727824}
   - component: {fileID: 2133727823}
+  - component: {fileID: 2133727827}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1414,6 +1425,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2133727827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2133727822}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 472f54d41bbd5d444935d14ae33c379e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraLookAhead
+  target: {fileID: 1610075564}
+  baseOffset: {x: 0, y: 0, z: -10}
+  lookAheadDistance: 2
+  returnSpeed: 5
+  followSpeed: 5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
