@@ -48,6 +48,27 @@ public class PlayerController : MonoBehaviour
     private float horizontal;
     private Vector2 velocity;
 
+    private bool isCrouching;
+
+    [Header("Slide")]
+    [SerializeField] private float slideSpeed = 18f;
+    [SerializeField] private float slideDuration = 0.7f;
+    [SerializeField] private float minSlideSpeed = 1f; // これ未満なら発動しない
+
+    private bool isSliding;
+    private float slideTimer;
+
+    [Header("Slide Collider")]
+    [SerializeField] private BoxCollider2D playerCollider;
+
+    [SerializeField] private Vector2 standingSize;
+    [SerializeField] private Vector2 standingOffset;
+
+    [SerializeField] private Vector2 slideSize;
+    [SerializeField] private Vector2 slideOffset;
+
+    [SerializeField] private Transform ceilingCheck;
+    [SerializeField] private float ceilingCheckRadius = 0.1f;
     private float coyoteCounter;
     private float jumpBufferCounter;
 
@@ -62,8 +83,15 @@ public class PlayerController : MonoBehaviour
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
         animator = GetComponentInChildren<Animator>();
-        if (trail == null) trail = GetComponent<TrailRenderer>();
-        trail.emitting = false;
+
+        if (playerCollider == null)
+            playerCollider = GetComponent<BoxCollider2D>();
+
+        standingSize = playerCollider.size;
+        standingOffset = playerCollider.offset;
+
+        if (trail != null)
+            trail.emitting = false; // ← これ追加
     }
 
     void Update()
@@ -101,6 +129,7 @@ public class PlayerController : MonoBehaviour
         HandleJump();
         HandleMovement();
         ApplyGravity();
+        HandleSlide();
 
         rb.linearVelocity = velocity;
         UpdateAnimator();
@@ -111,8 +140,25 @@ public class PlayerController : MonoBehaviour
         if (!canMove) horizontal = 0;
         else horizontal = Input.GetAxisRaw("Horizontal");
 
-        if (Input.GetKeyDown(KeyCode.Space)) jumpBufferCounter = jumpBufferTime;
-        else jumpBufferCounter -= Time.deltaTime;
+        // しゃがみ入力
+        bool crouchPressed = Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow);
+        bool crouchHeld = Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow);
+
+        // 走り中ならスライド開始
+        if (crouchPressed && isGrounded && Mathf.Abs(velocity.x) > minSlideSpeed && !isSliding)
+        {
+            StartSlide();
+            return;
+        }
+
+        // 通常しゃがみ
+        isCrouching = crouchHeld && !isSliding;
+
+        // ジャンプバッファ
+        if (Input.GetKeyDown(KeyCode.Space))
+            jumpBufferCounter = jumpBufferTime;
+        else
+            jumpBufferCounter -= Time.deltaTime;
     }
 
     void CheckGround()
@@ -197,6 +243,12 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovement()
     {
+        if (isSliding) return;
+        if (isCrouching && isGrounded)
+        {
+            velocity.x = 0;
+            return;
+        }
         if (!canMove) return;
 
         if (isGrounded)
@@ -221,7 +273,55 @@ public class PlayerController : MonoBehaviour
         dashCooldownCounter = dashCooldown;
         trail.emitting = true;
     }
+    void StartSlide()
+    {
+        isSliding = true;
+        slideTimer = slideDuration;
 
+        animator.SetBool("IsSliding", true);
+
+        velocity.x = transform.localScale.x * slideSpeed;
+
+        // コライダー縮小
+        playerCollider.size = slideSize;
+        playerCollider.offset = slideOffset;
+
+    }
+    bool CanStandUp()
+    {
+        return !Physics2D.OverlapCircle(
+            ceilingCheck.position,
+            ceilingCheckRadius,
+            groundLayer
+        );
+    }
+    void HandleSlide()
+    {
+        if (!isSliding) return;
+
+        slideTimer -= Time.deltaTime;
+
+        // 徐々に減速させたい場合
+        velocity.x = Mathf.Lerp(velocity.x, 0, 4f * Time.deltaTime);
+
+        if (slideTimer <= 0 || Mathf.Abs(velocity.x) < 0.5f || !isGrounded)
+        {
+            EndSlide();
+        }
+    }
+
+    void EndSlide()
+    {
+        if (!CanStandUp())
+            return; // 頭がぶつかるなら終了しない
+
+        isSliding = false;
+        animator.SetBool("IsSliding", false);
+
+        // コライダー戻す
+        playerCollider.size = standingSize;
+        playerCollider.offset = standingOffset;
+    }
     void DashMove()
     {
         float direction = transform.localScale.x;
@@ -245,6 +345,7 @@ public class PlayerController : MonoBehaviour
         animator.SetFloat("YVelocity", rb.linearVelocity.y);
         animator.SetFloat("Speed", Mathf.Abs(rb.linearVelocity.x));
         animator.SetBool("IsDashing", isDashing);
+        animator.SetBool("IsCrouching", isCrouching);
 
     }
 
@@ -261,6 +362,13 @@ public class PlayerController : MonoBehaviour
             Gizmos.color = Color.blue;
             Vector3 dir = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
             Gizmos.DrawLine(wallCheck.position, wallCheck.position + dir * wallCheckDistance);
+        }
+        {
+            if (ceilingCheck != null)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawWireSphere(ceilingCheck.position, ceilingCheckRadius);
+            }
         }
     }
 }
