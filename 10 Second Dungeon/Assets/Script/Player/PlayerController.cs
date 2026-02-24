@@ -34,6 +34,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float wallJumpForceX = 12f;
     [SerializeField] private float wallJumpForceY = 14f;
     [SerializeField] private float wallJumpControlTime = 0.2f;
+    [SerializeField] private float wallCheckHeightMultiplier = 1.2f;
+    [SerializeField] private float wallCheckWidth = 0.1f;
 
     private bool isDashing;
     private bool hasAirDashed;
@@ -47,6 +49,10 @@ public class PlayerController : MonoBehaviour
     private float wallCoyoteCounter; // 壁ジャンプ残り時間
     private float horizontal;
     private Vector2 velocity;
+    [SerializeField] private float wallJumpLockTime = 0.15f;
+    private float wallJumpLockCounter;
+    private int wallSide; // -1 = 左壁, 1 = 右壁
+    private bool wasTouchingWall;
 
     private bool isCrouching;
 
@@ -72,6 +78,10 @@ public class PlayerController : MonoBehaviour
     private float coyoteCounter;
     private float jumpBufferCounter;
 
+    [SerializeField] private Transform graphics;
+
+    
+
     private bool isGrounded;
     private bool isTouchingWall;
     private bool isWallSliding;
@@ -91,13 +101,18 @@ public class PlayerController : MonoBehaviour
         standingOffset = playerCollider.offset;
 
         if (trail != null)
-            trail.emitting = false; // ← これ追加
+            trail.emitting = false; 
+        if (graphics == null)
+            graphics = transform.Find("Graphics");
     }
 
     void Update()
     {
         velocity = rb.linearVelocity;
 
+        if (wallJumpLockCounter > 0)
+            wallJumpLockCounter -= Time.deltaTime;
+        
         // クールダウン更新
         if (dashCooldownCounter > 0) dashCooldownCounter -= Time.deltaTime;
 
@@ -175,32 +190,67 @@ public class PlayerController : MonoBehaviour
 
     void CheckWall()
     {
-        isTouchingWall = Physics2D.Raycast(
+        Vector2 boxSize = new Vector2(0.1f, playerCollider.size.y * 1.0f);
+
+        RaycastHit2D hitRight = Physics2D.BoxCast(
             wallCheck.position,
-            transform.localScale.x > 0 ? Vector2.right : Vector2.left,
+            boxSize,
+            0f,
+            Vector2.right,
             wallCheckDistance,
             wallLayer
         );
 
-        if (isTouchingWall && velocity.y < 0) // 壁接触中＆落下中
+        RaycastHit2D hitLeft = Physics2D.BoxCast(
+            wallCheck.position,
+            boxSize,
+            0f,
+            Vector2.left,
+            wallCheckDistance,
+            wallLayer
+        );
+
+        if (hitRight.collider != null)
         {
-            wallCoyoteCounter = wallCoyoteTime; // 壁ジャンプ可能時間リセット
+            isTouchingWall = true;
+            wallSide = 1;
+        }
+        else if (hitLeft.collider != null)
+        {
+            isTouchingWall = true;
+            wallSide = -1;
         }
         else
         {
-            wallCoyoteCounter -= Time.deltaTime; // 時間経過で減少
+            isTouchingWall = false;
         }
+
+        // 壁に触れた瞬間ロック
+        if (isTouchingWall && !wasTouchingWall && velocity.y < 0)
+        {
+            wallJumpLockCounter = wallJumpLockTime;
+        }
+
+        if (isTouchingWall && velocity.y < 0)
+            wallCoyoteCounter = wallCoyoteTime;
+        else
+            wallCoyoteCounter -= Time.deltaTime;
+
+        wasTouchingWall = isTouchingWall;
     }
 
     void HandleWallSlide()
     {
-        if (isTouchingWall && !isGrounded && velocity.y < 0)
+        // 上昇中は絶対に壁スライドさせない
+        if (isTouchingWall && !isGrounded && velocity.y < -0.1f)
         {
             isWallSliding = true;
             velocity.y = Mathf.Max(velocity.y, -wallSlideSpeed);
         }
         else
+        {
             isWallSliding = false;
+        }
 
         animator.SetBool("IsWallSliding", isWallSliding);
     }
@@ -216,7 +266,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // 壁ジャンプ（コヨーテタイム対応）
-        if (jumpBufferCounter > 0 && wallCoyoteCounter > 0)
+        if (jumpBufferCounter > 0 && wallCoyoteCounter > 0 && wallJumpLockCounter <= 0)
         {
             StartCoroutine(WallJump());
             jumpBufferCounter = 0;
@@ -230,12 +280,13 @@ public class PlayerController : MonoBehaviour
 
     IEnumerator WallJump()
     {
+        isTouchingWall = false;
         canMove = false;
-        velocity.x = -transform.localScale.x * wallJumpForceX;
+        velocity.x = -wallSide * wallJumpForceX;
         velocity.y = wallJumpForceY;
         isWallSliding = false;
 
-        transform.localScale = new Vector3(-transform.localScale.x, 1, 1); // 反対方向を向く
+        graphics.localScale = new Vector3(-wallSide, 1, 1);
 
         yield return new WaitForSeconds(wallJumpControlTime);
         canMove = true;
@@ -256,8 +307,8 @@ public class PlayerController : MonoBehaviour
         else
             velocity.x = Mathf.MoveTowards(velocity.x, horizontal * moveSpeed, airAcceleration * Time.deltaTime);
 
-        if (horizontal > 0) transform.localScale = new Vector3(1, 1, 1);
-        else if (horizontal < 0) transform.localScale = new Vector3(-1, 1, 1);
+        if (horizontal > 0) graphics.localScale = new Vector3(1, 1, 1);
+        else if (horizontal < 0) graphics.localScale = new Vector3(-1, 1, 1);
     }
 
     void ApplyGravity()
@@ -324,7 +375,7 @@ public class PlayerController : MonoBehaviour
     }
     void DashMove()
     {
-        float direction = transform.localScale.x;
+        float direction = graphics.localScale.x;
         velocity.x = direction * dashPower;
         velocity.y = 0;
 
@@ -359,9 +410,19 @@ public class PlayerController : MonoBehaviour
 
         if (wallCheck != null)
         {
-            Gizmos.color = Color.blue;
-            Vector3 dir = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
-            Gizmos.DrawLine(wallCheck.position, wallCheck.position + dir * wallCheckDistance);
+            Gizmos.color = Color.cyan;
+
+            Vector2 boxSize = new Vector2(0.1f, playerCollider.size.y * 1.0f);
+
+            Gizmos.DrawWireCube(
+                wallCheck.position + Vector3.right * wallCheckDistance,
+                boxSize
+            );
+
+            Gizmos.DrawWireCube(
+                wallCheck.position + Vector3.left * wallCheckDistance,
+                boxSize
+            );
         }
         {
             if (ceilingCheck != null)

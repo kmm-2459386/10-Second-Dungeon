@@ -16,6 +16,8 @@ public class SideScrollEnemy : MonoBehaviour
     [Header("壁検知")]
     [SerializeField] float wallCheckDistance = 0.5f;
     [SerializeField] LayerMask groundLayer;
+    [SerializeField] Transform wallCheckPoint;
+
     [Header("崖検知")]
     [SerializeField] float groundCheckDistance = 1f;
     [SerializeField] Transform groundCheckPoint;
@@ -114,7 +116,7 @@ public class SideScrollEnemy : MonoBehaviour
     bool IsWallAhead()
     {
         RaycastHit2D hit = Physics2D.Raycast(
-            transform.position,
+            wallCheckPoint.position,
             Vector2.right * direction,
             wallCheckDistance,
             groundLayer
@@ -145,14 +147,15 @@ public class SideScrollEnemy : MonoBehaviour
     }
     void OnDrawGizmosSelected()
     {
-        // 壁チェック
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawLine(
-            transform.position,
-            transform.position + Vector3.right * direction * wallCheckDistance
-        );
+        if (wallCheckPoint != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(
+                wallCheckPoint.position,
+                wallCheckPoint.position + Vector3.right * direction * wallCheckDistance
+            );
+        }
 
-        // 崖チェック
         if (groundCheckPoint != null)
         {
             Gizmos.color = Color.blue;
