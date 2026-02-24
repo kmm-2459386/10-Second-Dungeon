@@ -72,6 +72,8 @@ public class PlayerController : MonoBehaviour
     private float coyoteCounter;
     private float jumpBufferCounter;
 
+    [SerializeField] private Transform graphics;
+
     private bool isGrounded;
     private bool isTouchingWall;
     private bool isWallSliding;
@@ -91,7 +93,9 @@ public class PlayerController : MonoBehaviour
         standingOffset = playerCollider.offset;
 
         if (trail != null)
-            trail.emitting = false; // ← これ追加
+            trail.emitting = false; 
+        if (graphics == null)
+            graphics = transform.Find("Graphics");
     }
 
     void Update()
@@ -177,7 +181,7 @@ public class PlayerController : MonoBehaviour
     {
         isTouchingWall = Physics2D.Raycast(
             wallCheck.position,
-            transform.localScale.x > 0 ? Vector2.right : Vector2.left,
+            graphics.localScale.x > 0 ? Vector2.right : Vector2.left,
             wallCheckDistance,
             wallLayer
         );
@@ -231,11 +235,11 @@ public class PlayerController : MonoBehaviour
     IEnumerator WallJump()
     {
         canMove = false;
-        velocity.x = -transform.localScale.x * wallJumpForceX;
+        velocity.x = -graphics.localScale.x * wallJumpForceX;
         velocity.y = wallJumpForceY;
         isWallSliding = false;
 
-        transform.localScale = new Vector3(-transform.localScale.x, 1, 1); // 反対方向を向く
+        graphics.localScale = new Vector3(-graphics.localScale.x, 1, 1);
 
         yield return new WaitForSeconds(wallJumpControlTime);
         canMove = true;
@@ -256,8 +260,8 @@ public class PlayerController : MonoBehaviour
         else
             velocity.x = Mathf.MoveTowards(velocity.x, horizontal * moveSpeed, airAcceleration * Time.deltaTime);
 
-        if (horizontal > 0) transform.localScale = new Vector3(1, 1, 1);
-        else if (horizontal < 0) transform.localScale = new Vector3(-1, 1, 1);
+        if (horizontal > 0) graphics.localScale = new Vector3(1, 1, 1);
+        else if (horizontal < 0) graphics.localScale = new Vector3(-1, 1, 1);
     }
 
     void ApplyGravity()
@@ -324,7 +328,7 @@ public class PlayerController : MonoBehaviour
     }
     void DashMove()
     {
-        float direction = transform.localScale.x;
+        float direction = graphics.localScale.x;
         velocity.x = direction * dashPower;
         velocity.y = 0;
 
@@ -360,7 +364,7 @@ public class PlayerController : MonoBehaviour
         if (wallCheck != null)
         {
             Gizmos.color = Color.blue;
-            Vector3 dir = transform.localScale.x > 0 ? Vector2.right : Vector2.left;
+            Vector3 dir = graphics.localScale.x > 0 ? Vector2.right : Vector2.left;
             Gizmos.DrawLine(wallCheck.position, wallCheck.position + dir * wallCheckDistance);
         }
         {
