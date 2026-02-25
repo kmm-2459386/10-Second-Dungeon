@@ -5,25 +5,30 @@ public class SideScrollEnemy : MonoBehaviour
     public enum EnemyState { Patrol, Chase, Attack }
     private EnemyState currentState;
 
-    [Header("�ړ�")]
+    [Header("移動")]
     [SerializeField] float moveSpeed = 2f;
     [SerializeField] float chaseSpeed = 3f;
 
-    [Header("���m")]
+    [Header("検知")]
     [SerializeField] float detectDistance = 5f;
     [SerializeField] float attackRange = 1.5f;
     [SerializeField] LayerMask playerLayer;
-    [Header("�ǌ��m")]
+
+    [Header("壁検知")]
     [SerializeField] float wallCheckDistance = 0.5f;
     [SerializeField] LayerMask groundLayer;
     [SerializeField] Transform wallCheckPoint;
 
-    [Header("�R���m")]
+    [Header("崖検知")]
     [SerializeField] float groundCheckDistance = 1f;
     [SerializeField] Transform groundCheckPoint;
+
     private Rigidbody2D rb;
     private Transform player;
     private int direction = 1;
+
+    [SerializeField] private Animator anim;  // 子のAnimatorをインスペクターでセット
+    private bool isAttacking = false;        // 攻撃中フラグ
 
     void Start()
     {
@@ -41,19 +46,20 @@ public class SideScrollEnemy : MonoBehaviour
             case EnemyState.Chase: Chase(); break;
             case EnemyState.Attack: Attack(); break;
         }
+        UpdateAnimation();
     }
 
-    // ===== ��ԕύX�Ǘ� =====
+    // ===== 状態変更管理 =====
     void ChangeState(EnemyState newState)
     {
         if (currentState == newState) return;
 
         currentState = newState;
 
-        Debug.Log("���݂̏��: " + currentState);
+        Debug.Log("現在の状態: " + currentState);
     }
 
-    // ===== Patrol =====
+    // ===== 巡回 =====
     void Patrol()
     {
         rb.linearVelocity = new Vector2(moveSpeed * direction, rb.linearVelocity.y);
@@ -68,8 +74,7 @@ public class SideScrollEnemy : MonoBehaviour
             ChangeState(EnemyState.Chase);
     }
 
-
-    // ===== Chase =====
+    // ===== 追跡 =====
     void Chase()
     {
         float dir = Mathf.Sign(player.position.x - transform.position.x);
@@ -82,21 +87,43 @@ public class SideScrollEnemy : MonoBehaviour
             ChangeState(EnemyState.Patrol);
     }
 
-    // ===== Attack =====
+    // ===== 攻撃 =====
     void Attack()
     {
         rb.linearVelocity = Vector2.zero;
 
-        if (!InAttackRange())
+        if (!isAttacking)
         {
-            ChangeState(EnemyState.Chase);
-            return;
+            isAttacking = true;
+            anim.SetTrigger("Attack"); // 攻撃アニメーション発火
+            Debug.Log("Attack Animation Triggered");
         }
 
-        // �U�������������ꏊ
+        // プレイヤーが射程外になったら Chase に戻す
+        if (!InAttackRange())
+        {
+            isAttacking = false;
+            ChangeState(EnemyState.Chase);
+        }
     }
 
-    // ===== ���m =====
+    // ===== アニメーション更新 =====
+    void UpdateAnimation()
+    {
+        if (!isAttacking)
+        {
+            float speed = Mathf.Abs(rb.linearVelocity.x);
+            anim.SetFloat("Speed", speed);
+        }
+    }
+
+    public void EndAttack()
+    {
+        isAttacking = false;
+        Debug.Log("Attack Animation Ended");
+    }
+
+    // ===== プレイヤー検知 =====
     bool DetectPlayer()
     {
         RaycastHit2D hit = Physics2D.Raycast(
@@ -113,6 +140,8 @@ public class SideScrollEnemy : MonoBehaviour
     {
         return Mathf.Abs(player.position.x - transform.position.x) < attackRange;
     }
+
+    // ===== 壁検知 =====
     bool IsWallAhead()
     {
         RaycastHit2D hit = Physics2D.Raycast(
@@ -124,6 +153,7 @@ public class SideScrollEnemy : MonoBehaviour
 
         return hit.collider != null;
     }
+
     void Flip()
     {
         direction *= -1;
@@ -132,8 +162,10 @@ public class SideScrollEnemy : MonoBehaviour
         scale.x *= -1;
         transform.localScale = scale;
 
-        Debug.Log("�ǂ����m �� ���]");
+        Debug.Log("壁を検知 → 反転");
     }
+
+    // ===== 崖検知 =====
     bool IsCliffAhead()
     {
         RaycastHit2D hit = Physics2D.Raycast(
@@ -143,8 +175,9 @@ public class SideScrollEnemy : MonoBehaviour
             groundLayer
         );
 
-        return hit.collider == null; // �n�ʂ�������ΊR
+        return hit.collider == null; // 地面がなければ崖
     }
+
     void OnDrawGizmosSelected()
     {
         if (wallCheckPoint != null)
@@ -165,6 +198,4 @@ public class SideScrollEnemy : MonoBehaviour
             );
         }
     }
-
-
 }
