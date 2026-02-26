@@ -7,7 +7,11 @@ public class PlayerHealth : MonoBehaviour
     private int currentHP;
 
     [Header("Animator")]
-    [SerializeField] private Animator anim; // プレイヤーのAnimator
+    [SerializeField] private Animator anim;
+
+    [Header("無敵フレーム")]
+    [SerializeField] private float invincibleTime = 0.8f; // 0.8秒無敵
+    private bool isInvincible = false;
 
     public bool IsDead { get; private set; } = false;
 
@@ -16,59 +20,46 @@ public class PlayerHealth : MonoBehaviour
         currentHP = maxHP;
     }
 
-    /// <summary>
-    /// ダメージを受ける
-    /// </summary>
     public void TakeDamage(int damage)
     {
-        if (IsDead) return;
+        if (IsDead || isInvincible) return;
 
         currentHP -= damage;
         currentHP = Mathf.Max(currentHP, 0);
 
-        Debug.Log("Player Damage: " + damage + " / Current HP: " + currentHP);
+        Debug.Log($"Player took {damage} damage! Current HP: {currentHP}");
 
-        // ダメージアニメーション
         if (anim != null)
         {
             anim.SetTrigger("Damage");
         }
 
-        // HPが0になったら死亡処理
+        // 無敵フレーム開始
+        if (invincibleTime > 0)
+            StartCoroutine(InvincibleCoroutine());
+
         if (currentHP <= 0)
-        {
             Die();
-        }
     }
-    public int GetCurrentHPMax()
+
+    private System.Collections.IEnumerator InvincibleCoroutine()
     {
-        return maxHP;
+        isInvincible = true;
+        yield return new WaitForSeconds(invincibleTime);
+        isInvincible = false;
     }
-    /// <summary>
-    /// プレイヤー死亡処理
-    /// </summary>
+
     private void Die()
     {
         if (IsDead) return;
 
         IsDead = true;
         Debug.Log("Player Died");
-
         if (anim != null)
-        {
             anim.SetTrigger("Die");
-        }
-
-        // 移動や操作を停止する場合はここで管理
-        // 例: PlayerController を無効化
-        // GetComponent<PlayerController>().enabled = false;
+        // 操作停止などもここで
     }
 
-    /// <summary>
-    /// 現在HP取得
-    /// </summary>
-    public int GetCurrentHP()
-    {
-        return currentHP;
-    }
+    public int GetCurrentHP() => currentHP;
+    public int GetCurrentHPMax() => maxHP;
 }
