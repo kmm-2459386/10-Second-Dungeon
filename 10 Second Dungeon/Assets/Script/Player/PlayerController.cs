@@ -85,7 +85,18 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
     private bool isGrounded;
     #endregion
+    #region Attack
+    
+    [Header("Attack")]
+    [SerializeField] private Transform attackPoint;
+    [SerializeField] private float attackRadius = 0.5f;
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private int attackDamage = 1;
+    [SerializeField] private float attackCooldown = 0.3f;
 
+    private bool isAttacking;
+    private float attackCooldownCounter;
+    #endregion
     void Start()
     {
         if (rb == null) rb = GetComponent<Rigidbody2D>();
@@ -125,8 +136,18 @@ public class PlayerController : MonoBehaviour
             DashMove();
             UpdateAnimator();
             return;
+           
         }
 
+        // 攻撃クールダウン更新
+        if (attackCooldownCounter > 0)
+            attackCooldownCounter -= Time.deltaTime;
+
+        // 攻撃入力
+        if (Input.GetKeyDown(KeyCode.J) && attackCooldownCounter <= 0 && !isAttacking)
+        {
+            StartAttack();
+        }
         // 通常処理
         HandleInput();
         CheckGround();
@@ -276,6 +297,7 @@ public class PlayerController : MonoBehaviour
 
     void HandleMovement()
     {
+        if (isAttacking) return;
         if (isSliding) return;
         if (isCrouching && isGrounded)
         {
@@ -373,7 +395,34 @@ public class PlayerController : MonoBehaviour
         animator.SetBool("IsDashing", isDashing);
         animator.SetBool("IsCrouching", isCrouching);
     }
+    void StartAttack()
+    {
+        isAttacking = true;
+        canMove = false;          // ← 移動停止
+        attackCooldownCounter = attackCooldown;
 
+        velocity.x = 0;
+        animator.SetTrigger("Attack");
+    }
+    public void PerformAttack()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(
+            attackPoint.position,
+            attackRadius,
+            enemyLayer
+        );
+
+        foreach (Collider2D hit in hits)
+        {
+            hit.GetComponent<EnemyHealth>()?.TakeDamage(attackDamage);
+        }
+    }
+    public void EndAttack()
+    {
+        Debug.Log("EndAttack呼ばれた");
+        isAttacking = false;
+        canMove = true;
+    }
     void OnDrawGizmosSelected()
     {
         if (groundCheck != null)
@@ -398,7 +447,11 @@ public class PlayerController : MonoBehaviour
                 boxSize
             );
         }
-
+        if (attackPoint != null)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
+        }
         if (ceilingCheck != null)
         {
             Gizmos.color = Color.yellow;
