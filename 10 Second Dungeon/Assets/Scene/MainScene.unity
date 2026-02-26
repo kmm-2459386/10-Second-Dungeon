@@ -5380,6 +5380,13 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 8
+  attackPoint: {fileID: 0}
+  attackRadius: 0.5
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  attackDamage: 1
+  attackCooldown: 0.3
 --- !u!114 &1610075569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5680,6 +5687,14 @@ PrefabInstance:
     - target: {fileID: 4339007787390110364, guid: d20a957f428fa68468bec2790be733f0, type: 3}
       propertyPath: m_Name
       value: Goblin
+      objectReference: {fileID: 0}
+    - target: {fileID: 6262550722600435720, guid: d20a957f428fa68468bec2790be733f0, type: 3}
+      propertyPath: m_Mass
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 6262550722600435720, guid: d20a957f428fa68468bec2790be733f0, type: 3}
+      propertyPath: m_GravityScale
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
